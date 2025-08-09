@@ -1,0 +1,59 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Create 3 private S3 buckets with PublicAccessBlock and optional versioning
+
+Parameters:
+  ProjectPrefix:
+    Type: String
+    Default: prog8870
+    Description: Prefix for bucket names
+  EnableVersioning:
+    Type: String
+    AllowedValues: [true, false]
+    Default: true
+    Description: Enable bucket versioning
+
+Mappings: {}
+Conditions:
+  IsVersioning: !Equals [!Ref EnableVersioning, "true"]
+
+Resources:
+  BucketA:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${ProjectPrefix}-cfn-a-${AWS::AccountId}-${AWS::Region}"
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      VersioningConfiguration: 
+        Status: !If [IsVersioning, Enabled, Suspended]
+
+  BucketB:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${ProjectPrefix}-cfn-b-${AWS::AccountId}-${AWS::Region}"
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      VersioningConfiguration: 
+        Status: !If [IsVersioning, Enabled, Suspended]
+
+  BucketC:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${ProjectPrefix}-cfn-c-${AWS::AccountId}-${AWS::Region}"
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      VersioningConfiguration: 
+        Status: !If [IsVersioning, Enabled, Suspended]
+
+Outputs:
+  Buckets:
+    Value: !Join [",", [!Ref BucketA, !Ref BucketB, !Ref BucketC]]
+    Description: Names of the created buckets

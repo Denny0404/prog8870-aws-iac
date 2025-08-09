@@ -1,0 +1,14 @@
+# Copy this file to terraform.tfvars and fill values where needed
+region            = "us-east-1"
+project_prefix    = "prog8870"
+enable_s3_versioning = true
+
+# Provide a valid AMI for your chosen region (Amazon Linux 2023 recommended)
+# Get one via: aws ec2 describe-images --owners amazon --filters "Name=name,Values=al2023-ami-*-x86_64" --query 'Images[*].ImageId' --output text
+ec2_ami_id        = "ami-xxxxxxxxxxxxxxxxx"
+ec2_instance_type = "t3.micro"
+
+db_name           = "appdb"
+db_username       = "adminuser"
+db_password       = "ChangeMeStrong#123"
+db_instance_class = "db.t3.micro"
