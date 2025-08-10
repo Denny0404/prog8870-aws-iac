@@ -1,0 +1,54 @@
+# Terraform
+**/.terraform/*
+.terraform/*
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+# Plans
+*.tfplan
+# Vars (keep only the example file)
+*.tfvars
+*.auto.tfvars
+!*.example
+# Keep provider lock file for reproducibility
+!.terraform.lock.hcl
+
+# Keys / secrets
+*.pem
+*.ppk
+*.key
+*.pkey
+*.csr
+*.crt
+*.der
+*.pub
+*.creds
+*.secret
+.env
+.env.*
+
+# AWS local config (never commit)
+.aws/
+
+# Editors / OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*.swn
+.idea/
+.vscode/
+!.vscode/extensions.json
+*.code-workspace
+
+# Logs / temp
+*.log
+*.tmp
+tmp/
+*.bak
+*~
+
+# AWS CLI installer artifacts
+aws/
+awscliv2.zip

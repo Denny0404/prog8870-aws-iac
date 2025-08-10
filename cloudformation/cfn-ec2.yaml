@@ -1,89 +1,116 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: EC2 with VPC, Subnet, IGW, Route Table; outputs public IP
+Description: EC2 in a new VPC with IGW, route table, and public subnet. Outputs the public IP.
 
 Parameters:
   ProjectPrefix:
     Type: String
-    Default: prog8870
+    Default: denishakbari-8901001
+    AllowedPattern: '^[a-z0-9-]+$'
+    Description: Lowercase, hyphenated prefix used for names/tags.
   AmiId:
     Type: AWS::EC2::Image::Id
-    Description: AMI for EC2 (e.g., Amazon Linux 2023)
+    Description: AMI ID to launch (e.g., Amazon Linux 2023).
   InstanceType:
     Type: String
     Default: t3.micro
+    AllowedValues:
+      - t2.micro
+      - t3.micro
+      - t3a.micro
+      - t3.small
+    Description: Instance type.
 
 Resources:
   VPC:
     Type: AWS::EC2::VPC
     Properties:
-      CidrBlock: 10.1.0.0/16
-      EnableDnsSupport: true
+      CidrBlock: 10.4.0.0/16
       EnableDnsHostnames: true
+      EnableDnsSupport: true
       Tags:
         - Key: Name
-          Value: !Sub "${ProjectPrefix}-cfn-vpc"
+          Value: !Sub '${ProjectPrefix}-vpc-cfn'
 
-  IGW:
+  InternetGateway:
     Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectPrefix}-igw-cfn'
 
-  IGWAttach:
+  AttachGateway:
     Type: AWS::EC2::VPCGatewayAttachment
     Properties:
       VpcId: !Ref VPC
-      InternetGatewayId: !Ref IGW
+      InternetGatewayId: !Ref InternetGateway
 
   PublicSubnet:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref VPC
-      CidrBlock: 10.1.1.0/24
+      CidrBlock: 10.4.1.0/24
       MapPublicIpOnLaunch: true
+      AvailabilityZone: !Select [0, !GetAZs ""]
       Tags:
         - Key: Name
-          Value: !Sub "${ProjectPrefix}-cfn-public-1"
+          Value: !Sub '${ProjectPrefix}-public-1a-cfn'
 
-  PublicRTB:
+  RouteTable:
     Type: AWS::EC2::RouteTable
     Properties:
       VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectPrefix}-rtb-public-cfn'
 
-  PublicRoute:
+  DefaultRoute:
     Type: AWS::EC2::Route
+    DependsOn: AttachGateway
     Properties:
-      RouteTableId: !Ref PublicRTB
+      RouteTableId: !Ref RouteTable
       DestinationCidrBlock: 0.0.0.0/0
-      GatewayId: !Ref IGW
-    DependsOn: IGWAttach
+      GatewayId: !Ref InternetGateway
 
-  PublicAssoc:
+  PublicRouteAssoc:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
-      RouteTableId: !Ref PublicRTB
       SubnetId: !Ref PublicSubnet
+      RouteTableId: !Ref RouteTable
 
-  SGSSH:
+  Ec2Sg:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Allow SSH
+      GroupDescription: Allow SSH (22) - demo only
       VpcId: !Ref VPC
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: 22
           ToPort: 22
           CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          FromPort: 0
+          ToPort: 0
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectPrefix}-ec2-ssh-cfn'
 
-  EC2:
+  Ec2Instance:
     Type: AWS::EC2::Instance
     Properties:
       ImageId: !Ref AmiId
       InstanceType: !Ref InstanceType
       SubnetId: !Ref PublicSubnet
-      SecurityGroupIds: [!Ref SGSSH]
+      SecurityGroupIds: [ !Ref Ec2Sg ]
       Tags:
         - Key: Name
-          Value: !Sub "${ProjectPrefix}-cfn-ec2"
+          Value: !Sub '${ProjectPrefix}-ec2-cfn'
 
 Outputs:
   Ec2PublicIp:
-    Description: Public IP of the instance
-    Value: !GetAtt EC2.PublicIp
+    Description: Public IP of the EC2 instance
+    Value: !GetAtt Ec2Instance.PublicIp
+  InstanceId:
+    Description: EC2 Instance ID
+    Value: !Ref Ec2Instance

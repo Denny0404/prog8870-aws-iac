@@ -5,10 +5,10 @@ resource "aws_security_group" "rds_mysql" {
   vpc_id      = aws_vpc.main.id
 
   ingress {
-    description = "MySQL from EC2"
-    from_port   = 3306
-    to_port     = 3306
-    protocol    = "tcp"
+    description     = "MySQL from EC2"
+    from_port       = 3306
+    to_port         = 3306
+    protocol        = "tcp"
     security_groups = [aws_security_group.ec2_ssh.id]
   }
 
@@ -26,7 +26,7 @@ resource "aws_security_group" "rds_mysql" {
 resource "aws_db_subnet_group" "db" {
   name       = "${var.project_prefix}-db-subnets"
   subnet_ids = [aws_subnet.private_1.id, aws_subnet.private_2.id]
-  tags = { Name = "${var.project_prefix}-db-subnets" }
+  tags       = { Name = "${var.project_prefix}-db-subnets" }
 }
 
 resource "aws_db_instance" "mysql" {
@@ -41,7 +41,7 @@ resource "aws_db_instance" "mysql" {
   db_subnet_group_name   = aws_db_subnet_group.db.name
   vpc_security_group_ids = [aws_security_group.rds_mysql.id]
   multi_az               = false
-  publicly_accessible    = false  # Secure by default for Terraform module
+  publicly_accessible    = false # Secure by default for Terraform module
   skip_final_snapshot    = true
 
   # Ensure we don't try to create before subnets/sg are ready

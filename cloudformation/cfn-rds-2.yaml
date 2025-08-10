@@ -1,0 +1,82 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Public RDS MySQL (demo only). Creates a second DB with a unique identifier.
+
+Parameters:
+  ProjectPrefix:
+    Type: String
+    Default: prog8870
+  DBName:
+    Type: String
+    Default: appdb2
+  MasterUsername:
+    Type: String
+    Default: adminuser
+  MasterUserPassword:
+    Type: String
+    NoEcho: true
+  DBInstanceIdentifier:
+    Type: String
+    Default: prog8870-mysql-2
+
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.3.0.0/16
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+
+  SubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.3.1.0/24
+      AvailabilityZone: !Select [0, !GetAZs ""]
+
+  SubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.3.2.0/24
+      AvailabilityZone: !Select [1, !GetAZs ""]
+
+  RDSSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow MySQL (demo only)
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+          CidrIp: 0.0.0.0/0
+
+  DBSubnets:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Subnets for RDS
+      SubnetIds: [!Ref SubnetA, !Ref SubnetB]
+
+  MyDB2:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBInstanceIdentifier: !Ref DBInstanceIdentifier
+      DBName: !Ref DBName
+      Engine: mysql
+      EngineVersion: "8.0"
+      DBInstanceClass: db.t3.micro
+      AllocatedStorage: 20
+      MasterUsername: !Ref MasterUsername
+      MasterUserPassword: !Ref MasterUserPassword
+      VPCSecurityGroups: [!Ref RDSSG]
+      DBSubnetGroupName: !Ref DBSubnets
+      PubliclyAccessible: true
+      DeletionProtection: false
+      BackupRetentionPeriod: 0
+      MultiAZ: false
+
+Outputs:
+  RDSEndpoint:
+    Value: !GetAtt MyDB2.Endpoint.Address
+  DBIdentifier:
+    Value: !Ref MyDB2

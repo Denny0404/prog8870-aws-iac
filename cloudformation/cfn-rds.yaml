@@ -1,10 +1,11 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Public RDS MySQL (for project demo). NOT for production use.
+Description: Public RDS MySQL (demo only) with its own VPC, two subnets (2 AZs), SG on 3306.
 
 Parameters:
   ProjectPrefix:
     Type: String
-    Default: prog8870
+    Default: denishakbari-8901001
+    AllowedPattern: '^[a-z0-9-]+$'
   DBName:
     Type: String
     Default: appdb
@@ -14,46 +15,68 @@ Parameters:
   MasterUserPassword:
     Type: String
     NoEcho: true
+    MinLength: 8
+  PublicAccess:
+    Type: String
+    Default: 'true'
+    AllowedValues: ['true','false']
+    Description: Set to 'true' for PubliclyAccessible, 'false' if org policy blocks it.
+
+Conditions:
+  MakePublic: !Equals [ !Ref PublicAccess, 'true' ]
 
 Resources:
   VPC:
     Type: AWS::EC2::VPC
     Properties:
-      CidrBlock: 10.2.0.0/16
+      CidrBlock: 10.5.0.0/16
       EnableDnsHostnames: true
       EnableDnsSupport: true
+      Tags: [{ Key: Name, Value: !Sub '${ProjectPrefix}-vpc-cfn-rds' }]
 
   SubnetA:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref VPC
-      CidrBlock: 10.2.1.0/24
+      CidrBlock: 10.5.1.0/24
+      AvailabilityZone: !Select [0, !GetAZs ""]
+      Tags: [{ Key: Name, Value: !Sub '${ProjectPrefix}-db-subnet-a' }]
+
   SubnetB:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref VPC
-      CidrBlock: 10.2.2.0/24
+      CidrBlock: 10.5.2.0/24
+      AvailabilityZone: !Select [1, !GetAZs ""]
+      Tags: [{ Key: Name, Value: !Sub '${ProjectPrefix}-db-subnet-b' }]
 
   RDSSG:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Allow MySQL (Project Demo Only)
+      GroupDescription: Allow MySQL 3306 (demo only)
       VpcId: !Ref VPC
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: 3306
           ToPort: 3306
           CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          FromPort: 0
+          ToPort: 0
+          CidrIp: 0.0.0.0/0
+      Tags: [{ Key: Name, Value: !Sub '${ProjectPrefix}-rds-mysql-sg' }]
 
   DBSubnets:
     Type: AWS::RDS::DBSubnetGroup
     Properties:
       DBSubnetGroupDescription: Subnets for RDS
-      SubnetIds: [!Ref SubnetA, !Ref SubnetB]
+      SubnetIds: [ !Ref SubnetA, !Ref SubnetB ]
 
   MyDB:
     Type: AWS::RDS::DBInstance
     Properties:
+      DBInstanceIdentifier: !Sub '${ProjectPrefix}-mysql-cfn'
       DBName: !Ref DBName
       Engine: mysql
       EngineVersion: "8.0"
@@ -61,16 +84,22 @@ Resources:
       AllocatedStorage: 20
       MasterUsername: !Ref MasterUsername
       MasterUserPassword: !Ref MasterUserPassword
-      VPCSecurityGroups: [!Ref RDSSG]
+      VPCSecurityGroups: [ !Ref RDSSG ]
       DBSubnetGroupName: !Ref DBSubnets
-      PubliclyAccessible: true
+      PubliclyAccessible: !If [ MakePublic, true, false ]
       DeletionProtection: false
       BackupRetentionPeriod: 0
       MultiAZ: false
+      DeleteAutomatedBackups: true
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
 
 Outputs:
+  DBIdentifier:
+    Value: !Ref MyDB
   RDSEndpoint:
     Value: !GetAtt MyDB.Endpoint.Address
-  RDSPublicAccessibility:
-    Value: !Ref MyDB
-    Description: DB Instance logical ID (indicates creation). PubliclyAccessible is true.
+  RDSPort:
+    Value: !GetAtt MyDB.Endpoint.Port
+  PubliclyAccessible:
+    Value: !If [ MakePublic, 'true', 'false' ]
