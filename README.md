@@ -96,10 +96,20 @@ Fetch a recent **Amazon Linux 2023** AMI ID:
 
 ```bash
 AMI=$(aws ec2 describe-images \
-  --owners amazon --region $REGION \
+  --owners amazon \
+  --region $REGION \
   --filters "Name=name,Values=al2023-ami-*-x86_64" "Name=state,Values=available" \
   --query "sort_by(Images, &CreationDate)[-1].ImageId" --output text)
 echo "AMI: $AMI"
+```
+```bash
+AMI=$(aws ec2 describe-images \
+  --owners amazon \
+  --region $AWS_DEFAULT_REGION \
+  --filters "Name=name,Values=al2023-ami-*-x86_64" "Name=state,Values=available" \
+  --query "sort_by(Images, &CreationDate)[-1].ImageId" --output text)
+
+echo "AMI ID: $AMI"
 ```
 
 ---
@@ -174,12 +184,23 @@ export PREFIX="denishakbari-8901001"
 ### 4.1 Validate templates (sanity check)
 
 ```bash
+export AWS_PROFILE=academy
+export AWS_DEFAULT_REGION=us-east-1   # << required
+aws sts get-caller-identity
+```
+
+```bash
 aws cloudformation validate-template --template-body file://cfn-s3.yaml
 aws cloudformation validate-template --template-body file://cfn-ec2.yaml
 aws cloudformation validate-template --template-body file://cfn-rds.yaml
 ```
 
 If validation fails, restore from **Appendix A**.
+
+```bash
+aws cloudformation delete-stack --stack-name ${PREFIX}-ec2
+aws cloudformation wait stack-delete-complete --stack-name ${PREFIX}-ec2
+```
 
 ### 4.2 S3 (3 private buckets, versioning)
 
